@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cat Selector App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    button, input {
+      margin: 5px 0;
+      padding: 8px;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Cat Selector App</h1>
+
+  <button onclick="showAllNames()">All Names</button><br>
+
+  <label for="healthInput">Health Issues:</label>
+  <input type="number" id="healthInput" placeholder="Enter a number">
+  <button onclick="filterByHealth()">Filter</button><br>
+
+  <button onclick="toggleWeight()">Weight (Imperial/Metric)</button><br>
+
+  <button onclick="showIntelligenceFriendliness()">Intelligence – Friendly</button><br>
+
+  <button onclick="showAverages()">Average Intelligence</button><br>
+
+  <h3>Output:</h3>
+  <pre id="output"></pre>
+
+  <script>
+    const API_KEY = 'YOUR_API_KEY';  // Replace with your actual Cat API key
+    const API_URL = 'https://api.thecatapi.com/v1/breeds';
+    let cats = [];
+    let useMetric = false;
+
+    // Function to fetch data from the Cat API
+    async function fetchCats() {
+      try {
+        const response = await fetch(API_URL, {
+          headers: {
+            'x-api-key': API_KEY
+          }
+        });
+        const data = await response.json();
+        cats = data.slice(0, 67); // Only take the first 67 breeds
+        console.log(cats); // For debugging
+      } catch (error) {
+        console.error("Error fetching cat data:", error);
+      }
+    }
+
+    // Function to display all cat names
+    function showAllNames() {
+      if (!cats.length) {
+        document.getElementById('output').textContent = "Loading cat data...";
+        fetchCats().then(() => {
+          const names = cats.map(cat => cat.name).join('\n');
+          document.getElementById('output').textContent = names;
+        });
+      } else {
+        const names = cats.map(cat => cat.name).join('\n');
+        document.getElementById('output').textContent = names;
+      }
+    }
+
+    // Function to filter cats by health issue
+    function filterByHealth() {
+      const issue = parseInt(document.getElementById('healthInput').value);
+      if (isNaN(issue)) {
+        alert('Please enter a valid number.');
+        return;
+      }
+      const filtered = cats.filter(cat => cat.health_issues && cat.health_issues.includes(issue));
+      const result = filtered.length ? filtered.map(cat => cat.name).join('\n') : 'No cats found for this health issue.';
+      document.getElementById('output').textContent = result;
+    }
+
+    // Function to toggle between Imperial and Metric weights
+    function toggleWeight() {
+      useMetric = !useMetric;
+      const result = cats.map(cat => {
+        const min = useMetric ? cat.weight.metric[0] : cat.weight.imperial[0];
+        const max = useMetric ? cat.weight.metric[1] : cat.weight.imperial[1];
+        const unit = useMetric ? 'kg' : 'lbs';
+        return `${cat.name}: ${min} - ${max} ${unit}`;
+      }).join('\n');
+      document.getElementById('output').textContent = result;
+    }
+
+    // Function to display Intelligence and Child-Friendliness
+    function showIntelligenceFriendliness() {
+      const result = cats.map(cat => 
+        `${cat.name} - I: ${cat.intelligence}, F: ${cat.child_friendly}`
+      ).join('\n');
+      document.getElementById('output').textContent = result;
+    }
+
+    // Function to calculate and show average intelligence
+    function showAverages() {
+      // Filter cats that have a valid 'intelligence' value
+      const catsWithIntelligence = cats.filter(cat => cat.intelligence !== undefined && cat.intelligence !== null);
+
+      // If there are no cats with intelligence data, show a message
+      if (catsWithIntelligence.length === 0) {
+        document.getElementById('output').textContent = 'No intelligence data available.';
+        return;
+      }
+
+      // Calculate the total intelligence and average intelligence
+      const totalInt = catsWithIntelligence.reduce((sum, cat) => sum + cat.intelligence, 0);
+      const avgInt = totalInt / catsWithIntelligence.length;
+
+      // Calculate the average intelligence for child-friendly cats (F >= 7)
+      const childFriendlyCats = catsWithIntelligence.filter(cat => cat.child_friendly >= 7);
+      const totalChildInt = childFriendlyCats.reduce((sum, cat) => sum + cat.intelligence, 0);
+      const avgChildInt = childFriendlyCats.length ? (totalChildInt / childFriendlyCats.length) : 0;
+
+      // Display the results
+      const result = `Average Intelligence: ${avgInt.toFixed(2)}\n` +
+                     `Average Intelligence (Child Friendly): ${avgChildInt.toFixed(2)}`;
+      document.getElementById('output').textContent = result;
+    }
+
+    // Call fetchCats when the page loads
+    window.onload = fetchCats;
+
+  </script>
+
+</body>
+</html>
